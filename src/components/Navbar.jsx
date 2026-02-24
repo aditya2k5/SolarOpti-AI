@@ -1,11 +1,24 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const toggleMenu = () => {
     setIsOpen(!isOpen);
+  };
+
+  const goToSection = (id) => {
+    if (location.pathname === '/') {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      navigate(`/#${id}`);
+    }
+    setIsOpen(false);
   };
 
   // Function to check if a link is active
@@ -25,22 +38,19 @@ const Navbar = () => {
         {/* Desktop menu */}
         <div className="hidden md:block">
           <div className="flex items-center space-x-4">
-            <Link to="/" className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
+            <button onClick={() => goToSection('home')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.pathname === '/' && (!location.hash || location.hash === '#home') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
               Home
-            </Link>
-            <Link to="" className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/about') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
+            </button>
+            <button onClick={() => goToSection('about')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.hash === '#about' ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
               About
-            </Link>
-            <Link to="" className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/features') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
+            </button>
+            <button onClick={() => goToSection('features')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.hash === '#features' ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
               Features
-            </Link>
-            <Link to="" className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/pricing') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
-              Pricing
-            </Link>
+            </button>
 
-            <Link to="" className={`px-3 py-2 text-sm font-medium transition-colors ${isActive('/contact') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
+            <button onClick={() => goToSection('contact')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.hash === '#contact' ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
               Contact
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -59,26 +69,21 @@ const Navbar = () => {
     {/* Mobile menu */}
     {isOpen && <div className="md:hidden bg-[#050B0A] border-t border-[rgba(16,185,129,0.22)]">
       <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-        <Link to="/" className={`block px-3 py-2 text-base font-medium rounded-md ${isActive('/') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => setIsOpen(false)}>
+        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.pathname === '/' && (!location.hash || location.hash === '#home') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('home')}>
           Home
-        </Link>
-        <Link to="" className={`block px-3 py-2 text-base font-medium rounded-md ${isActive('about') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => setIsOpen(false)}>
+        </button>
+        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.hash === '#about' ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('about')}>
           About
-        </Link>
-        <Link to="" className={`block px-3 py-2 text-base font-medium rounded-md ${isActive('features') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => setIsOpen(false)}>
+        </button>
+        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.hash === '#features' ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('features')}>
           Features
-        </Link>
-        <Link to="" className={`block px-3 py-2 text-base font-medium rounded-md ${isActive('pricing') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => setIsOpen(false)}>
-          Pricing
-        </Link>
-        <Link to="" className={`block px-3 py-2 text-base font-medium rounded-md ${isActive('contact') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => setIsOpen(false)}>
+        </button>
+        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.hash === '#contact' ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('contact')}>
           Contact
-        </Link>
+        </button>
 
         <div className="mt-4 px-3 py-2">
-          <Link to="https://codescandy.com/" target="_blank" className="btn-primary w-full inline-block text-center">
-            Get Template
-          </Link>
+
         </div>
       </div>
     </div>}
