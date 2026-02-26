@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Index from './pages/Index';
 import GetStarted from './pages/GetStarted';
 import ScrollToHash from './components/ScrollToHash';
+import Auth from './pages/Auth';
+
 
 const queryClient = new QueryClient();
 
@@ -17,8 +19,11 @@ const App = () => (
       <BrowserRouter>
         <ScrollToHash />
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<Auth />} />
+          <Route path="/Index" element={<Index />} />
+
           <Route path="/get-started" element={<GetStarted />} />
+
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
