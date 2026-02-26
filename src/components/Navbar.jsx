@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import logo from '../../assets/SolarOpti-logo.png';
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -29,8 +31,10 @@ const Navbar = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between h-16 items-center">
         {/* Logo */}
+
         <div className="flex-shrink-0 flex items-center">
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logo} alt="SolarOpti.AI Logo" className="h-8 w-auto" />
             <span className="text-2xl font-bold gradient-text">SolarOpti.AI</span>
           </Link>
         </div>

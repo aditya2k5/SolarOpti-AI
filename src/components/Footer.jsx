@@ -1,11 +1,14 @@
 import React from 'react';
+import logo from '../../assets/SolarOpti-logo.png';
+
 const Footer = () => {
   return <footer className="bg-transparent border-t border-[rgba(16,185,129,0.22)] pt-16 pb-8">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
         {/* Company info */}
         <div className="col-span-1 md:col-span-1">
-          <a href="#" className="inline-block mb-4">
+          <a href="#" className="flex items-center gap-2 mb-4">
+            <img src={logo} alt="SolarOpti.AI Logo" className="h-8 w-auto" />
             <span className="text-2xl font-bold gradient-text">SolarOpti.AI</span>
           </a>
           <p className="text-[rgba(248,250,252,0.72)] mb-4">Design, simulate, and optimize solar installations with AI precision.</p>
