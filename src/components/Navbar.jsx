@@ -12,13 +12,13 @@ const Navbar = () => {
   };
 
   const goToSection = (id) => {
-    if (location.pathname === '/') {
+    if (location.pathname === '/Index') {
       const element = document.getElementById(id);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } else {
-      navigate(`/#${id}`);
+      navigate(`/Index#${id}`);
     }
     setIsOpen(false);
   };
@@ -33,7 +33,7 @@ const Navbar = () => {
         {/* Logo */}
 
         <div className="flex-shrink-0 flex items-center">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/Index" className="flex items-center gap-2">
             <img src={logo} alt="SolarOpti.AI Logo" className="h-8 w-auto" />
             <span className="text-2xl font-bold gradient-text">SolarOpti.AI</span>
           </Link>
@@ -42,7 +42,7 @@ const Navbar = () => {
         {/* Desktop menu */}
         <div className="hidden md:block">
           <div className="flex items-center space-x-4">
-            <button onClick={() => goToSection('home')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.pathname === '/' && (!location.hash || location.hash === '#home') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
+            <button onClick={() => goToSection('home')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.pathname === '/Index' && (!location.hash || location.hash === '#home') ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
               Home
             </button>
             <button onClick={() => goToSection('about')} className={`px-3 py-2 text-sm font-medium transition-colors ${location.hash === '#about' ? 'text-[#10B981]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399]'}`}>
@@ -73,7 +73,7 @@ const Navbar = () => {
     {/* Mobile menu */}
     {isOpen && <div className="md:hidden bg-[#050B0A] border-t border-[rgba(16,185,129,0.22)]">
       <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.pathname === '/' && (!location.hash || location.hash === '#home') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('home')}>
+        <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.pathname === '/Index' && (!location.hash || location.hash === '#home') ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('home')}>
           Home
         </button>
         <button className={`w-full text-left block px-3 py-2 text-base font-medium rounded-md ${location.hash === '#about' ? 'text-[#10B981] bg-[rgba(16,185,129,0.1)]' : 'text-[rgba(248,250,252,0.72)] hover:text-[#34D399] hover:bg-[rgba(16,185,129,0.05)]'}`} onClick={() => goToSection('about')}>
