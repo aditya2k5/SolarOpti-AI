@@ -1,7 +1,10 @@
 import React from 'react';
 import logo from '../../assets/SolarOpti-logo.png';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const Footer = () => {
+  const navigate = useNavigate();
   return <footer className="bg-transparent border-t border-[rgba(16,185,129,0.22)] pt-16 pb-8">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
@@ -34,6 +37,14 @@ const Footer = () => {
               </svg>
             </a>
           </div>
+          <Button
+            variant="outline"
+            className="mt-6 w-fit border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 transition-colors"
+            type="button"
+            onClick={() => navigate("/")}
+          >
+            <span>Log Out</span>
+          </Button>
         </div>
 
         {/* Product links */}

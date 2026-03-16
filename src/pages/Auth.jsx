@@ -1,7 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import logo from '../../assets/SolarOpti-logo.png';
 
 export default function Auth() {

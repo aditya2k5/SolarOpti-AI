@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 
+
 const HeroSection = () => {
   const navigate = useNavigate();
 
@@ -35,7 +36,6 @@ const HeroSection = () => {
                 onClick={() => navigate("/get-started")}
               >
                 <span>Get Started Free</span>
-                <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -63,4 +63,5 @@ const HeroSection = () => {
     </div>
   );
 };
+
 export default HeroSection;
