@@ -3,7 +3,25 @@
 @tailwind utilities;
 
 @layer base {
+  /* LIGHT MODE (Default) */
   :root {
+    --background: #FFFFFF;
+    --foreground: #0F172A;
+
+    --surface-card: rgba(0, 0, 0, 0.03);
+    --surface-card-hover: rgba(0, 0, 0, 0.06);
+
+    --border-emerald: rgba(16, 185, 129, 0.2);
+
+    --primary-emerald: #10B981;
+    --accent-bright: #059669;
+
+    --text-primary: #0F172A;
+    --text-muted: #64748B;
+  }
+
+  /* DARK MODE */
+  .dark {
     --background: #050B0A;
     --foreground: #F8FAFC;
 
@@ -20,12 +38,13 @@
   }
 
   * {
-    @apply border-emerald-500/20;
+    border-color: var(--border-emerald);
   }
 
   body {
     background-color: var(--background);
     color: var(--text-primary);
+    @apply transition-colors duration-300;
   }
 }
 
@@ -47,81 +66,51 @@
     @apply scale-[1.02];
   }
 
+  /* REFINED PRIMARY BUTTON */
   .btn-primary {
     background-color: var(--primary-emerald);
-    color: #050B0A;
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
-    @apply hover:bg-[#34D399] font-semibold py-3 px-6 rounded-xl transition-all duration-300;
+    /* We use dark text for both modes because it pops better against Emerald */
+    color: #050B0A; 
+    @apply font-bold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 0 25px rgba(52, 211, 153, 0.5);
+    background-color: var(--accent-bright);
+    box-shadow: 0 6px 25px rgba(52, 211, 153, 0.5);
+    @apply scale-[1.02] -translate-y-0.5;
   }
 
+  /* REFINED OUTLINE BUTTON */
   .btn-outline {
     background-color: transparent;
     border: 2px solid var(--primary-emerald);
     color: var(--primary-emerald);
-    @apply hover:bg-[#10B981] hover:text-[#050B0A] font-semibold py-3 px-6 rounded-xl transition-all duration-300;
+    @apply font-semibold py-3 px-6 rounded-xl transition-all duration-300;
   }
 
   .btn-outline:hover {
+    background-color: var(--primary-emerald);
+    /* Flip to dark text on hover to keep it readable */
+    color: #050B0A;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
   }
 
   .section-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24;
   }
-
-  .shadow-emerald {
-    box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
-  }
-
-  .animate-fade-in {
-    @apply opacity-0 translate-y-4 animate-[fadeIn_0.5s_ease-out_forwards];
-  }
-
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
 }
 
+/* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulseGlow {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-  }
-
-  70% {
-    box-shadow: 0 0 0 15px rgba(16, 185, 129, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
 
 .pulse-emerald {

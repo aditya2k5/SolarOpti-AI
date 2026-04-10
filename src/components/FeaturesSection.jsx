@@ -36,14 +36,15 @@ const features = [
 
 const SolarFeaturesSection = () => {
   return (
-    <div className="bg-transparent py-16 md:py-24">
+    <div className="bg-transparent py-16 md:py-24 transition-colors duration-300">
       <div className="section-container">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6 gradient-text !leading-tight">
             Powerful <span className="block">AI Features to Maximize</span>
-            <span className="block text-[#F8FAFC]">Your Solar Yield</span>
+      
+            <span className="block text-[var(--text-primary)]">Your Solar Yield</span>
           </h2>
-          <p className="text-xl text-[rgba(248,250,252,0.72)] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-[var(--text-muted)] max-w-2xl mx-auto leading-relaxed">
             Precision forecasting, perfect angles, and instant ROI analysis—all powered by cutting-edge AI.
           </p>
         </div>
@@ -52,14 +53,19 @@ const SolarFeaturesSection = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="card group p-8"
+              className="card group p-8" // Uses card from index.css
               style={{ animationDelay: `${index * 0.1}s` }}
             >
-              <div className="bg-[rgba(16,185,129,0.1)] group-hover:bg-[rgba(16,185,129,0.2)] w-14 h-14 flex items-center justify-center rounded-xl mb-6 transition-colors duration-300 border border-[rgba(16,185,129,0.22)] group-hover:border-[rgba(16,185,129,0.5)]">
+              <div className="bg-[rgba(16,185,129,0.1)] group-hover:bg-[rgba(16,185,129,0.2)] w-14 h-14 flex items-center justify-center rounded-xl mb-6 transition-colors duration-300 border border-[var(--border-emerald)] group-hover:border-[#10B981]">
                 {feature.icon}
               </div>
-              <h3 className="text-2xl font-bold mb-4 text-[#F8FAFC] group-hover:text-[#34D399] transition-colors">{feature.title}</h3>
-              <p className="text-[rgba(248,250,252,0.72)] leading-relaxed">{feature.description}</p>
+              
+              <h3 className="text-2xl font-bold mb-4 text-[var(--text-primary)] group-hover:text-[#10B981] transition-colors">
+                {feature.title}
+              </h3>
+              <p className="text-[var(--text-muted)] leading-relaxed">
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>

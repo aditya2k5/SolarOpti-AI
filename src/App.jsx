@@ -8,6 +8,7 @@ import Index from './pages/Index';
 import GetStarted from './pages/GetStarted';
 import ScrollToHash from './components/ScrollToHash';
 import Auth from './pages/Auth';
+import { ThemeProvider } from './components/ui/themeToggle'; // Your theme provider
 
 const queryClient = new QueryClient();
 
@@ -16,12 +17,9 @@ const NavigationHandler = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if this is a fresh reload/load
     const hasLoadedSession = sessionStorage.getItem('hasLoadedSession');
-
     if (!hasLoadedSession) {
       sessionStorage.setItem('hasLoadedSession', 'true');
-      // Force user back to auth page on fresh load if they aren't already there
       if (location.pathname !== '/') {
         navigate('/', { replace: true });
       }
@@ -30,9 +28,7 @@ const NavigationHandler = ({ children }) => {
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      // Clear the session storage flag so the next load redirects to Auth
       sessionStorage.removeItem('hasLoadedSession');
-      // Show native browser warning dialog
       e.preventDefault();
       e.returnValue = '';
     };
@@ -46,20 +42,23 @@ const NavigationHandler = ({ children }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <NavigationHandler>
-          <ScrollToHash />
-          <Routes>
-            <Route path="/" element={<Auth />} />
-            <Route path="/Index" element={<Index />} />
-            <Route path="/get-started" element={<GetStarted />} />
-          </Routes>
-        </NavigationHandler>
-      </BrowserRouter>
-    </TooltipProvider>
+    {/* 1. Wrap the entire app in ThemeProvider */}
+    <ThemeProvider> 
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <NavigationHandler>
+            <ScrollToHash />
+            <Routes>
+              <Route path="/" element={<Auth />} />
+              <Route path="/Index" element={<Index />} />
+              <Route path="/get-started" element={<GetStarted />} />
+            </Routes>
+          </NavigationHandler>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
