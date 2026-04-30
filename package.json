@@ -75,5 +75,18 @@
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.19",
     "vite": "^5.4.1"
-  }
+  },
+  "description": "",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aditya2k5/SolarOpti-AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aditya2k5/SolarOpti-AI/issues"
+  },
+  "homepage": "https://github.com/aditya2k5/SolarOpti-AI#readme"
 }

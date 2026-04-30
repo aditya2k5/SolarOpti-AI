@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 
 const GetStarted = () => {
     const [step, setStep] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
+    const [results, setResults] = useState(null);
 
     const [form, setForm] = useState({
         // Location
@@ -28,21 +30,43 @@ const GetStarted = () => {
     const next = () => setStep((s) => Math.min(3, s + 1));
     const back = () => setStep((s) => Math.max(1, s - 1));
 
-    const runSimulation = () => {
-        // Later: call your backend POST /api/simulate with this payload
-        console.log("Simulation payload:", {
-            location: { address: form.address, lat: Number(form.lat), lon: Number(form.lon) },
-            system: {
-                panelArea: Number(form.panelArea),
-                efficiency: Number(form.efficiency),
-                tilt: Number(form.tilt),
-                azimuth: Number(form.azimuth),
-                inverterRating: Number(form.inverterRating),
-                cost: Number(form.cost),
-            },
-            tariff: Number(form.tariff),
-        });
-        alert("Form saved! Next step: connect this to /api/simulate");
+    const runSimulation = async () => {
+        setIsLoading(true);
+        try {
+            const payload = {
+                location: { address: form.address, lat: Number(form.lat), lon: Number(form.lon) },
+                system: {
+                    panelArea: Number(form.panelArea),
+                    efficiency: Number(form.efficiency),
+                    tilt: Number(form.tilt),
+                    azimuth: Number(form.azimuth),
+                    inverterRating: Number(form.inverterRating),
+                    cost: Number(form.cost),
+                },
+                tariff: Number(form.tariff),
+            };
+            
+            const response = await fetch('http://localhost:5000/api/simulate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                setResults(data.data.predictions);
+                setStep(4);
+            } else {
+                alert("Simulation failed: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error connecting to server. Make sure Node backend is running on port 5000.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -67,19 +91,22 @@ const GetStarted = () => {
                             { n: 1, label: "Location" },
                             { n: 2, label: "System" },
                             { n: 3, label: "Cost & Tariff" },
+                            { n: 4, label: "Results" },
                         ].map((x) => (
                             <div key={x.n} className="flex items-center gap-2">
                                 <div
                                     className={[
-                                        "h-8 w-8 rounded-full grid place-items-center text-sm font-bold",
+                                        "h-8 w-8 rounded-full grid place-items-center text-sm font-bold transition-colors",
                                         step === x.n
                                             ? "bg-emerald-500 text-white"
-                                            : "bg-white/10 text-emerald-100/80 border border-emerald-500/20",
+                                            : step > x.n 
+                                                ? "bg-emerald-500/50 text-white" 
+                                                : "bg-white/10 text-emerald-100/80 border border-emerald-500/20",
                                     ].join(" ")}
                                 >
                                     {x.n}
                                 </div>
-                                <span className="text-sm text-emerald-100/70">{x.label}</span>
+                                <span className="text-sm text-emerald-100/70 hidden sm:inline-block">{x.label}</span>
                             </div>
                         ))}
                     </div>
@@ -156,7 +183,7 @@ const GetStarted = () => {
 
                         {/* Step 3 */}
                         {step === 3 && (
-                            <div>
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 <h2 className="text-xl font-semibold text-white mb-4">Cost & Tariff</h2>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -170,32 +197,75 @@ const GetStarted = () => {
                             </div>
                         )}
 
+                        {/* Step 4 - Results */}
+                        {step === 4 && results && (
+                            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="text-center mb-8">
+                                    <h2 className="text-2xl font-bold text-emerald-400 mb-2">Simulation Complete!</h2>
+                                    <p className="text-emerald-100/80">Here are your personalized solar system recommendations.</p>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                    <ResultCard title="Recommended System" value={`${results.recommendedSystemSize_kW} kW`} />
+                                    <ResultCard title="Battery Capacity" value={`${results.recommendedBatteryCapacity_Ah} Ah`} />
+                                    <ResultCard title="Optimal Tilt Angle" value={`${results.optimalTiltAngle}°`} />
+                                    <ResultCard title="Annual Yield" value={`${results.estimatedAnnualYield_kWh} kWh`} />
+                                    <ResultCard title="Annual Savings" value={`₹${results.estimatedAnnualSavings}`} />
+                                    <ResultCard title="Payback Period" value={`${results.paybackPeriod_years} Years`} highlight={true} />
+                                </div>
+                                
+                                <div className="mt-6 p-6 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center">
+                                    <h3 className="text-lg font-semibold text-white mb-2">Estimated ROI (25 Years)</h3>
+                                    <p className="text-3xl font-bold text-emerald-400">{results.ROI_percentage}%</p>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Actions */}
                         <div className="mt-8 flex items-center justify-between gap-3">
-                            <button
-                                type="button"
-                                onClick={back}
-                                disabled={step === 1}
-                                className="rounded-xl px-5 py-3 border border-emerald-500/20 text-white hover:border-emerald-400/50 transition disabled:opacity-50"
-                            >
-                                Back
-                            </button>
+                            {step < 4 ? (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={back}
+                                        disabled={step === 1 || isLoading}
+                                        className="rounded-xl px-5 py-3 border border-emerald-500/20 text-white hover:border-emerald-400/50 transition disabled:opacity-50"
+                                    >
+                                        Back
+                                    </button>
 
-                            {step < 3 ? (
-                                <button
-                                    type="button"
-                                    onClick={next}
-                                    className="rounded-xl px-5 py-3 bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
-                                >
-                                    Next
-                                </button>
+                                    {step < 3 ? (
+                                        <button
+                                            type="button"
+                                            onClick={next}
+                                            className="rounded-xl px-5 py-3 bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
+                                        >
+                                            Next
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={runSimulation}
+                                            disabled={isLoading}
+                                            className="rounded-xl px-5 py-3 bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                        >
+                                            {isLoading && (
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                            )}
+                                            {isLoading ? "Running..." : "Run Simulation"}
+                                        </button>
+                                    )}
+                                </>
                             ) : (
                                 <button
                                     type="button"
-                                    onClick={runSimulation}
-                                    className="rounded-xl px-5 py-3 bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
+                                    onClick={() => { setStep(1); setResults(null); }}
+                                    className="mx-auto rounded-xl px-5 py-3 bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
                                 >
-                                    Run Simulation
+                                    Start New Simulation
                                 </button>
                             )}
                         </div>
@@ -216,8 +286,18 @@ function Field({ label, value, onChange }) {
                 value={value}
                 onChange={onChange}
                 type="number"
+                step="any"
                 className="w-full rounded-xl bg-black/40 border border-emerald-500/20 px-4 py-3 text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
+        </div>
+    );
+}
+
+function ResultCard({ title, value, highlight = false }) {
+    return (
+        <div className={`p-5 rounded-xl border ${highlight ? 'border-emerald-400 bg-emerald-500/20' : 'border-emerald-500/20 bg-white/5'}`}>
+            <p className="text-sm text-emerald-100/70 mb-1">{title}</p>
+            <p className={`text-2xl font-bold ${highlight ? 'text-emerald-300' : 'text-white'}`}>{value}</p>
         </div>
     );
 }
