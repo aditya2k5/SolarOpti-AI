@@ -72,14 +72,14 @@ export default function Auth() {
 
             // Success
             setError("");
-            navigate("/get-started");
+            navigate("/Index");
         }
 
     } else {
 
         // Login Mode
         setError("");
-        navigate("/get-started");
+        navigate("/Index");
     }
 };
 
