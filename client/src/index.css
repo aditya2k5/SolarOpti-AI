@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* LIGHT MODE (Default) */
+
   :root {
     --background: #FFFFFF;
     --foreground: #0F172A;
@@ -20,7 +20,7 @@
     --text-muted: #64748B;
   }
 
-  /* DARK MODE */
+
   .dark {
     --background: #050B0A;
     --foreground: #F8FAFC;

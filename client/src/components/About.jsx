@@ -122,7 +122,7 @@ const About = () => {
                     </div>
 
                   
-                    <section className="mt-10 rounded-2xl border border-[var(--border-emerald)] bg-gradient-to-r from-emerald-500/10 to-green-500/5 p-8">
+                    <section className="mt-10 rounded-2xl border border-[var(--border-emerald)] bg-gradient-to-r from-emerald-500/10 to-green-500/5 p-8ri ">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="h-11 w-11 rounded-xl bg-emerald-500/10 grid place-items-center">
                                 <Sun className="h-5 w-5 text-[#10B981]" />
