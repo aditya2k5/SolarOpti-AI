@@ -1,19 +1,17 @@
 import express from "express";
 import cors from "cors";
 
+import solarRoutes from "./routes/solarRoutes.js";
+
 const app = express();
 
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
+app.use("/api/solar", solarRoutes);
 
-// Test Route
 app.get("/", (req, res) => {
-    res.send("Backend Running Successfully");
+    res.send("Backend Running");
 });
 
-
-// Export App
 export default app;

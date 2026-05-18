@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
 // Fix for default Leaflet marker icons in React
-
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
     iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
@@ -16,47 +15,74 @@ L.Icon.Default.mergeOptions({
 function MapEventsAndMarker({ lat, lon, updateLocation }) {
     const map = useMap();
 
+    // FIX 2: Added auto-pan effect so map moves smoothly when location updates
     useEffect(() => {
         if (lat && lon) {
-            map.flyTo([lat, lon], map.getZoom());
+            map.flyTo([Number(lat), Number(lon)], map.getZoom());
         }
     }, [lat, lon, map]);
 
     useMapEvents({
-        click(e) {
+        click: (e)  => {
             updateLocation(e.latlng.lat, e.latlng.lng);
         },
     });
 
-    return lat && lon ? <Marker position={[lat, lon]} /> : null;
+    return lat && lon ? (
+        <Marker position={[Number(lat), Number(lon)]} />
+    ) : null;
 }
 
 const GetStarted = () => {
+    // CURRENT STEP
     const [step, setStep] = useState(1);
+
+    // Location Loader
     const [isLocating, setIsLocating] = useState(false);
 
+    // solar result
+    const [result, setResult] = useState(null);
+
+    // Loading State Tracker
+    const [loading, setLoading] = useState(false);
+
+    // form data
     const [form, setForm] = useState({
-        // Step 1: Location
+        // step 1 - location
         address: "",
         lat: "",
         lon: "",
 
-        // Step 2: Consumption
-        consumptionType: "bill", // 'bill' or 'kwh'
+        // step 2 - energy
+        consumptionType: "bill",
         monthlyBill: "",
         monthlyKwh: "",
 
-        // Step 3: Roof Information
+        // STEP 3 - PROPERTY
         roofType: "Flat Roof",
         roofArea: "",
         budget: "1L-3L",
     });
 
-    const update = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
-    const updateDirect = (key, value) => setForm((p) => ({ ...p, [key]: value }));
+    // Input update
+    const update = (key) => (e) => {
+        setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    };
 
+    // direct update
+    const updateDirect = (key, value) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    // MAP LOCATION UPDATE
     const updateLocation = (lat, lon) => {
-        setForm((p) => ({ ...p, lat: parseFloat(lat).toFixed(6), lon: parseFloat(lon).toFixed(6) }));
+        setForm((prev) => {
+            return {
+                ...prev,
+                lat: String(parseFloat(lat).toFixed(6)),
+                lon: String(parseFloat(lon).toFixed(6))
+            };
+        });
     };
 
     const handleAutoDetect = () => {
@@ -82,31 +108,102 @@ const GetStarted = () => {
     const next = () => setStep((s) => Math.min(3, s + 1));
     const back = () => setStep((s) => Math.max(1, s - 1));
 
-    const runSimulation = () => {
-        // Send these simple inputs to the backend.
-        // The backend AI will calculate tilt, azimuth, efficiency, and inverter sizing.
-        console.log("Simulation Payload (Sent to AI Backend):", {
-            location: {
-                address: form.address,
-                coordinates: form.lat && form.lon ? [Number(form.lat), Number(form.lon)] : null
-            },
-            consumption: {
-                type: form.consumptionType,
-                value: form.consumptionType === 'bill' ? Number(form.monthlyBill) : Number(form.monthlyKwh)
-            },
-            propertyDetails: {
-                roofType: form.roofType,
-                roofAreaSqFt: Number(form.roofArea),
-                budgetRange: form.budget
+    const runSimulation = async () => {
+        // FRONTEND VALIDATION
+        if (!form.lat || !form.lon) {
+            alert("Please select your location");
+            return;
+        }
+
+        if (form.consumptionType === "bill" && !form.monthlyBill) {
+            alert("Please enter monthly bill");
+            return;
+        }
+
+        if (form.consumptionType === "kwh" && !form.monthlyKwh) {
+            alert("Please enter monthly units");
+            return;
+        }
+
+        // START LOADING
+        setLoading(true);
+
+        try {
+            // REQUEST PAYLOAD
+            const payload = {
+                location: {
+                    address: form.address,
+                    coordinates: form.lat && form.lon
+                        ? [Number(form.lat), Number(form.lon)]
+                        : null
+                },
+                consumption: {
+                    type: form.consumptionType,
+                    value: form.consumptionType === "bill"
+                        ? Number(form.monthlyBill)
+                        : Number(form.monthlyKwh)
+                },
+                propertyDetails: {
+                    roofType: form.roofType,
+                    roofAreaSqFt: Number(form.roofArea),
+                    budgetRange: form.budget,
+                    installationType: "Residential"
+                }
+            };
+
+            console.log("Sending Payload:", payload);
+
+            // FETCH REQUEST
+            const response = await fetch(
+                "http://localhost:5000/api/solar/calculate",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            // API ERROR HANDLING
+            if (!response.ok) {
+                throw new Error("Server Error");
             }
-        });
-        alert("Form saved! Check console for the payload sent to the AI.");
+
+            // RESPONSE DATA
+            const data = await response.json();
+            console.log("Backend Response:", data);
+
+            // SUCCESS
+            if (data.success) {
+                setResult(data.recommendation);
+                window.scrollTo({
+                    top: document.body.scrollHeight,
+                    behavior: "smooth"
+                });
+            } else {
+                alert(data.message || "An error occurred during calculation.");
+            }
+
+        } catch (error) {
+            console.error(error);
+            alert("Frontend Error: Could not connect to the server.");
+        } finally {
+            // ALWAYS STOP LOADING
+            setLoading(false);
+        }
     };
 
     const defaultCenter = [20.5937, 78.9629]; // Center of India
-
     const roofTypes = ["Flat Roof", "Sloped Roof", "Industrial Roof", "Ground Installation"];
-    const budgetRanges = ["< ₹1 Lakh", "₹1 Lakh – ₹3 Lakh", "₹3 Lakh – ₹5 Lakh", "> ₹5 Lakh"];
+
+    // FIX 1a: Restored Rupee Encoding Character Cleanliness
+    const budgetRanges = [
+        "< ₹1 Lakh",
+        "₹1 Lakh - ₹3 Lakh",
+        "₹3 Lakh - ₹5 Lakh",
+        "> ₹5 Lakh"
+    ];
 
     return (
         <div className="min-h-screen bg-[#0a0f12] text-white">
@@ -167,6 +264,7 @@ const GetStarted = () => {
                                         disabled={isLocating}
                                         className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 whitespace-nowrap"
                                     >
+                                        {/* FIX 1b: Restored Map Pin Emoji */}
                                         📍 {isLocating ? "Detecting..." : "Use Current Location"}
                                     </button>
                                 </div>
@@ -192,7 +290,8 @@ const GetStarted = () => {
                                             </div>
                                         )}
                                         <MapContainer
-                                            center={form.lat && form.lon ? [form.lat, form.lon] : defaultCenter}
+                                            // FIX 3: Parsed String Values securely to Numbers to eliminate Leaflet canvas faults
+                                            center={form.lat && form.lon ? [Number(form.lat), Number(form.lon)] : defaultCenter}
                                             zoom={form.lat && form.lon ? 16 : 4}
                                             style={{ height: "100%", width: "100%", zIndex: 10 }}
                                         >
@@ -233,6 +332,7 @@ const GetStarted = () => {
                                     <div>
                                         <label className="block text-sm text-emerald-100/80 mb-2">What is your average monthly electricity bill?</label>
                                         <div className="relative max-w-md">
+                                            {/* FIX 1c: Fixed input Rupee Icon */}
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-100/50">₹</span>
                                             <input
                                                 value={form.monthlyBill}
@@ -346,14 +446,103 @@ const GetStarted = () => {
                                 <button
                                     type="button"
                                     onClick={runSimulation}
-                                    className="rounded-xl px-8 py-3 bg-gradient-to-r from-emerald-400 to-emerald-600 text-white font-bold hover:shadow-lg hover:shadow-emerald-500/40 transition transform hover:-translate-y-0.5"
+                                    disabled={loading}
+                                    className="rounded-xl px-8 py-3 bg-gradient-to-r from-emerald-400 to-emerald-600 text-white font-bold hover:shadow-lg hover:shadow-emerald-500/40 transition transform hover:-translate-y-0.5 disabled:opacity-50"
                                 >
-                                    Generate AI Result
+                                    {loading ? "Generating..." : "Generate AI Result"}
                                 </button>
                             )}
                         </div>
                     </div>
                 </div>
+
+                {/* RESULT BLOCK INJECTED HERE */}
+                {result && (
+                    <div className="max-w-4xl mx-auto px-6 mt-16 pb-20 animate-in slide-in-from-bottom-8 duration-500">
+                        <div className="rounded-3xl border border-emerald-500/20 bg-white/5 backdrop-blur-md p-8 shadow-2xl shadow-emerald-900/10">
+                            <div className="mb-8">
+                                <h2 className="text-4xl font-bold text-emerald-400">
+                                    Solar Recommendation
+                                </h2>
+                                <p className="text-emerald-100/60 mt-2">
+                                    AI-generated solar analysis based on your property and energy usage.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                {/* SYSTEM SIZE */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Recommended System Size
+                                    </p>
+                                    <h3 className="text-3xl font-bold text-white mt-2">
+                                        {result.systemSize}
+                                    </h3>
+                                </div>
+
+                                {/* PANELS */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Solar Panels Required
+                                    </p>
+                                    <h3 className="text-3xl font-bold text-white mt-2">
+                                        {result.recommendedPanels}
+                                    </h3>
+                                </div>
+
+                                {/* INVERTER */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Recommended Inverter
+                                    </p>
+                                    <h3 className="text-xl font-bold text-white mt-2">
+                                        {result.recommendedInverter}
+                                    </h3>
+                                </div>
+
+                                {/* PRODUCTION */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Estimated Monthly Production
+                                    </p>
+                                    <h3 className="text-2xl font-bold text-white mt-2">
+                                        {result.estimatedProduction}
+                                    </h3>
+                                </div>
+
+                                {/* COST */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Estimated Installation Cost
+                                    </p>
+                                    <h3 className="text-2xl font-bold text-white mt-2">
+                                        {result.estimatedCost}
+                                    </h3>
+                                </div>
+
+                                {/* SUBSIDY */}
+                                <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Government Subsidy
+                                    </p>
+                                    <h3 className="text-2xl font-bold text-green-400 mt-2">
+                                        {result.governmentSubsidy}
+                                    </h3>
+                                </div>
+
+                                {/* FINAL COST */}
+                                <div className="md:col-span-2 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-6">
+                                    <p className="text-sm text-emerald-100/60">
+                                        Final Estimated Cost After Subsidy
+                                    </p>
+                                    <h3 className="text-4xl font-bold text-emerald-300 mt-3">
+                                        {result.finalCost}
+                                    </h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </main>
             <Footer />
         </div>
