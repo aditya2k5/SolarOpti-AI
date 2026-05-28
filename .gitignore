@@ -20,6 +20,8 @@ build/
 
 # Local files
 *.local
+.idea/
+.vscode/
 
 # Editor directories and files
 .vscode/*

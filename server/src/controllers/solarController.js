@@ -1,201 +1,149 @@
+import { calculateSubsidy } from "../services/subsidyService.js";
+import { calculateSizing } from "../services/solarSizingService.js";
+import { getWeatherFeatures } from "../services/weatherService.js";
+import { getMLPrediction } from "../services/mlPredictionService.js";
+import { getAverageTariff } from "../utils/tariffService.js";
+
 export const calculateSolar = async (req, res) => {
-
     try {
-
-        console.log("Incoming Request Body:");
-        console.log(req.body);
-
-        const {
-            location,
-            consumption,
-            propertyDetails
-        } = req.body;
+        const { location, consumption, propertyDetails } = req.body;
 
         // -----------------------------
         // VALIDATION
         // -----------------------------
-
-        if (
-            !location ||
-            !consumption ||
-            !propertyDetails
-        ) {
-
+        if (!location || !consumption || !propertyDetails) {
             return res.status(400).json({
-
                 success: false,
                 message: "Missing required fields."
             });
         }
 
         // -----------------------------
-        // MONTHLY UNIT CALCULATION
+        // LOCATION & STATE PARSING
         // -----------------------------
+        const lat = location.coordinates?.[0];
+        const lon = location.coordinates?.[1];
+        
+        // IMPORTANT: Ensure your frontend payload includes location.state (e.g., "Kerala")
+        const stateName = location.state || 'default';
 
+        // -----------------------------
+        // WEATHER ENGINE
+        // -----------------------------
+        const weather = await getWeatherFeatures(lat, lon);
+
+        // -----------------------------
+        // CONSUMPTION & DYNAMIC TARIFF
+        // -----------------------------
         let monthlyUnits = 0;
-
-        // If user entered bill amount
+        
         if (consumption.type === "bill") {
+            const billValue = Number(consumption.value);
+            
+            // Pass 1: Rough baseline estimate
+            const roughUnits = billValue / 6.5; 
+            
+            // Pass 2: Get the exact state tariff using the rough unit estimation
+            const exactTariff = getAverageTariff(stateName, roughUnits);
+            
+            // Pass 3: Calculate the highly accurate monthly units
+            monthlyUnits = billValue / exactTariff;
 
-            // Temporary average tariff per unit
-            const tariffRate = 7;
+        } else if (consumption.type === "kwh") {
+            monthlyUnits = Number(consumption.value);
+        } else {
+            return res.status(400).json({ success: false, message: "Invalid consumption type" });
+        }
+        
+        monthlyUnits = Math.round(monthlyUnits);
 
-            monthlyUnits =
-                Number(consumption.value) / tariffRate;
+        // -----------------------------
+        // STRUCTURAL SIZING ENGINE
+        // -----------------------------
+        // Static baseline for physical equipment layout (prevents weather from skewing panel counts)
+        const regionalBaselineSunHours = 4.8;
 
+        const sizingResult = calculateSizing({
+            monthlyUnits,
+            peakSunHours: regionalBaselineSunHours, 
+            roofAreaSqFt: propertyDetails.roofAreaSqFt
+        });
+
+        // -----------------------------
+        // INVERTER OPTIMIZATION
+        // -----------------------------
+        let inverterCap = Math.ceil(sizingResult.systemSize);
+        if (inverterCap === 4) inverterCap = 5;
+        if (inverterCap > 5 && inverterCap < 8) inverterCap = 8;
+        if (inverterCap > 8 && inverterCap < 10) inverterCap = 10;
+
+        const recommendedInverter = `${inverterCap}kW Smart Hybrid Inverter`;
+
+        // -----------------------------
+        // ML GRAPH PREDICTION
+        // -----------------------------
+        const mlPrediction = await getMLPrediction(
+            weather,
+            sizingResult.systemSize, 
+            propertyDetails.roofAreaSqFt
+        );
+
+        // SAFETY GUARD: Prevents crashes if the Python Flask server is down or returns null
+        if (!mlPrediction || !mlPrediction.chart_data) {
+            throw new Error("ML prediction service is currently unavailable.");
         }
 
-        // If user entered direct units
-        else if (consumption.type === "kwh") {
-
-            monthlyUnits =
-                Number(consumption.value);
-        }
-
-        // Invalid type
-        else {
-
-            return res.status(400).json({
-
-                success: false,
-                message: "Invalid consumption type."
-            });
-        }
+        const estimatedMonthlyProduction = mlPrediction.chart_data.reduce(
+            (sum, item) => sum + item.power_kwh, 0
+        ) * 30;
 
         // -----------------------------
-        // SYSTEM SIZE CALCULATION
+        // COST & SUBSIDY STRUCTURE
         // -----------------------------
+        const baselineCostPerKw = 65000;
+        const estimatedCost = Math.round(sizingResult.systemSize * baselineCostPerKw);
 
-        const systemSize =
-            Number((monthlyUnits / 120).toFixed(1));
+        const governmentSubsidy = calculateSubsidy(
+            sizingResult.systemSize,
+            propertyDetails.installationType
+        );
 
-        // -----------------------------
-        // PANEL CALCULATION
-        // -----------------------------
-
-        const panelWatt = 550;
-
-        const recommendedPanels =
-            Math.ceil(
-                (systemSize * 1000) / panelWatt
-            );
+        const finalCost = estimatedCost - governmentSubsidy;
 
         // -----------------------------
-        // INVERTER
+        // FINAL UNIFIED RESPONSE
         // -----------------------------
-
-        const recommendedInverter =
-            `${Math.ceil(systemSize)}kW Hybrid Inverter`;
-
-        // -----------------------------
-        // POWER PRODUCTION
-        // -----------------------------
-
-        const estimatedProduction =
-            Math.round(systemSize * 120);
-
-        // -----------------------------
-        // COST ESTIMATION
-        // -----------------------------
-
-        const estimatedCost =
-            Number(Math.round(systemSize * 70000));
-
-        // -----------------------------
-        // GOVERNMENT SUBSIDY
-        // -----------------------------
-
-        let governmentSubsidy = 0;
-
-        if (
-            propertyDetails.installationType ===
-            "Residential"
-        ) {
-
-            if (systemSize <= 3) {
-
-                governmentSubsidy = 78000;
-
-            } else {
-
-                governmentSubsidy = 108000;
-            }
-        }
-
-        // -----------------------------
-        // FINAL COST
-        // -----------------------------
-
-        const finalCost =
-            Number(estimatedCost) -
-            Number(governmentSubsidy);
-
-        // -----------------------------
-        // DEBUG LOGS
-        // -----------------------------
-
-        console.log("Monthly Units:", monthlyUnits);
-
-        console.log("System Size:", systemSize);
-
-        console.log("Estimated Cost:", estimatedCost);
-
-        console.log("Government Subsidy:", governmentSubsidy);
-
-        console.log("Final Cost:", finalCost);
-
-        // -----------------------------
-        // RESPONSE
-        // -----------------------------
-
         return res.status(200).json({
-
             success: true,
-
             recommendation: {
-
-                location:
-                    location.address || "Unknown",
-
-                recommendedPanels,
-
+                location: location.address || "Selected Location",
+                systemSize: `${sizingResult.systemSize} kW`,
+                recommendedPanels: sizingResult.recommendedPanels, 
                 recommendedInverter,
-
-                systemSize:
-                    `${systemSize} kW`,
-
-                estimatedProduction:
-                    `${estimatedProduction} kWh/month`,
-
-                estimatedCost:
-                    `₹${estimatedCost.toLocaleString()}`,
-
-                governmentSubsidy:
-                    `₹${governmentSubsidy.toLocaleString()}`,
-
-                finalCost:
-                    `₹${finalCost.toLocaleString()}`,
-
-                roofType:
-                propertyDetails.roofType,
-
-                roofAreaSqFt:
-                propertyDetails.roofAreaSqFt,
-
-                installationType:
-                propertyDetails.installationType,
+                estimatedProduction: `${estimatedMonthlyProduction.toFixed(2)} kWh/month`,
+                estimatedCost: `₹${estimatedCost.toLocaleString("en-IN")}`,
+                governmentSubsidy: `₹${governmentSubsidy.toLocaleString("en-IN")}`,
+                finalCost: `₹${finalCost.toLocaleString("en-IN")}`,
+                roofType: propertyDetails.roofType,
+                roofAreaSqFt: propertyDetails.roofAreaSqFt,
+                analyticalData: {
+                    irradiation: weather.irradiance,
+                    temperature: weather.temperature,
+                    humidity: weather.humidity
+                }
+            },
+            graphPrediction: {
+                peakPower: mlPrediction.peak_power_kwh,
+                peakTime: mlPrediction.peak_time,
+                chartData: mlPrediction.chart_data
             }
         });
 
     } catch (error) {
-
-        console.error("Solar Calculation Error:");
-        console.error(error);
-
+        console.error("Solar Controller Error:", error);
         return res.status(500).json({
-
             success: false,
-            message: "Server Error"
+            message: error.message || "Server computation error"
         });
     }
 };

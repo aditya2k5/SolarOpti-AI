@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from "react";
+import {
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    Tooltip,
+    ResponsiveContainer,
+    CartesianGrid
+} from "recharts";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
@@ -15,7 +24,6 @@ L.Icon.Default.mergeOptions({
 function MapEventsAndMarker({ lat, lon, updateLocation }) {
     const map = useMap();
 
-    // FIX 2: Added auto-pan effect so map moves smoothly when location updates
     useEffect(() => {
         if (lat && lon) {
             map.flyTo([Number(lat), Number(lon)], map.getZoom());
@@ -43,8 +51,14 @@ const GetStarted = () => {
     // solar result
     const [result, setResult] = useState(null);
 
-    // Loading State Tracker
+    //graph data
+    const [graphData, setGraphData] = useState([]);
+    const [peakInfo, setPeakInfo] = useState(null);
+
+    // Loading State Trackers
     const [loading, setLoading] = useState(false);
+    // ADDED: Export loading state
+    const [isExporting, setIsExporting] = useState(false); 
 
     // form data
     const [form, setForm] = useState({
@@ -128,20 +142,19 @@ const GetStarted = () => {
         // START LOADING
         setLoading(true);
 
+        const token = localStorage.getItem("token");
+
         try {
             // REQUEST PAYLOAD
             const payload = {
                 location: {
                     address: form.address,
-                    coordinates: form.lat && form.lon
-                        ? [Number(form.lat), Number(form.lon)]
-                        : null
+                    state: form.address?.split(",")?.pop()?.trim()?.replace(/\s+/g, ""),
+                    coordinates: form.lat && form.lon ? [Number(form.lat), Number(form.lon)] : null
                 },
                 consumption: {
                     type: form.consumptionType,
-                    value: form.consumptionType === "bill"
-                        ? Number(form.monthlyBill)
-                        : Number(form.monthlyKwh)
+                    value: form.consumptionType === "bill" ? Number(form.monthlyBill) : Number(form.monthlyKwh)
                 },
                 propertyDetails: {
                     roofType: form.roofType,
@@ -152,6 +165,7 @@ const GetStarted = () => {
             };
 
             console.log("Sending Payload:", payload);
+            console.log("Detected State:", payload.location.state);
 
             // FETCH REQUEST
             const response = await fetch(
@@ -159,24 +173,32 @@ const GetStarted = () => {
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${token}` 
                     },
                     body: JSON.stringify(payload)
                 }
             );
 
-            // API ERROR HANDLING
             if (!response.ok) {
-                throw new Error("Server Error");
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Server Error");
             }
 
-            // RESPONSE DATA
             const data = await response.json();
             console.log("Backend Response:", data);
 
             // SUCCESS
             if (data.success) {
                 setResult(data.recommendation);
+
+                if (data.graphPrediction) {
+                    setGraphData(data.graphPrediction.chartData);
+                    setPeakInfo({
+                        peakPower: data.graphPrediction.peakPower,
+                        peakTime: data.graphPrediction.peakTime
+                    });
+                }
                 window.scrollTo({
                     top: document.body.scrollHeight,
                     behavior: "smooth"
@@ -187,17 +209,75 @@ const GetStarted = () => {
 
         } catch (error) {
             console.error(error);
-            alert("Frontend Error: Could not connect to the server.");
+            alert(`Simulation Error: ${error.message}`);
         } finally {
-            // ALWAYS STOP LOADING
             setLoading(false);
+        }
+    };
+
+    // ADDED: PDF Generation Handler
+    const downloadPDFReport = async () => {
+        setIsExporting(true); // START LOADING
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                alert("Please sign in to export reports.");
+                setIsExporting(false);
+                return;
+            }
+            
+            // Construct payload mapping for the PDF Engine
+            const payload = {
+                recommendation: result,
+                peakInfo: peakInfo,
+                graphData: graphData,
+                formDetails: {
+                    address: form.address,
+                    lat: form.lat,
+                    lon: form.lon,
+                    roofType: form.roofType,
+                    monthlyBill: form.monthlyBill,
+                    monthlyKwh: form.monthlyKwh,
+                    state: form.address?.split(",")?.pop()?.trim()?.replace(/\s+/g, "")
+                }
+            };
+
+            const response = await fetch("http://localhost:5000/api/report/export-pdf", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to compile document bytes.");
+            }
+
+            // Stream document safely to the client browser
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.setAttribute("download", `SolarOpti_Proposal_${form.address?.split(',')[0]?.replace(/\s+/g, '_') || 'Report'}.pdf`);
+            
+            document.body.appendChild(link);
+            link.click();
+            
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(downloadUrl);
+
+        } catch (error) {
+            console.error("PDF Export Failure:", error);
+            alert("Could not generate proposal document. Please check your network connection.");
+        } finally {
+            setIsExporting(false); // STOP LOADING
         }
     };
 
     const defaultCenter = [20.5937, 78.9629]; // Center of India
     const roofTypes = ["Flat Roof", "Sloped Roof", "Industrial Roof", "Ground Installation"];
-
-    // FIX 1a: Restored Rupee Encoding Character Cleanliness
     const budgetRanges = [
         "< ₹1 Lakh",
         "₹1 Lakh - ₹3 Lakh",
@@ -264,7 +344,6 @@ const GetStarted = () => {
                                         disabled={isLocating}
                                         className="flex items-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-50 whitespace-nowrap"
                                     >
-                                        {/* FIX 1b: Restored Map Pin Emoji */}
                                         📍 {isLocating ? "Detecting..." : "Use Current Location"}
                                     </button>
                                 </div>
@@ -290,7 +369,6 @@ const GetStarted = () => {
                                             </div>
                                         )}
                                         <MapContainer
-                                            // FIX 3: Parsed String Values securely to Numbers to eliminate Leaflet canvas faults
                                             center={form.lat && form.lon ? [Number(form.lat), Number(form.lon)] : defaultCenter}
                                             zoom={form.lat && form.lon ? 16 : 4}
                                             style={{ height: "100%", width: "100%", zIndex: 10 }}
@@ -332,7 +410,6 @@ const GetStarted = () => {
                                     <div>
                                         <label className="block text-sm text-emerald-100/80 mb-2">What is your average monthly electricity bill?</label>
                                         <div className="relative max-w-md">
-                                            {/* FIX 1c: Fixed input Rupee Icon */}
                                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-100/50">₹</span>
                                             <input
                                                 value={form.monthlyBill}
@@ -539,6 +616,83 @@ const GetStarted = () => {
                                         {result.finalCost}
                                     </h3>
                                 </div>
+
+                                {/* ML POWER GRAPH */}
+                                <div className="mt-10 md:col-span-2">
+                                    <div className="mb-5">
+                                        <h3 className="text-2xl font-bold text-emerald-400">
+                                            AI Solar Power Curve
+                                        </h3>
+                                        <p className="text-emerald-100/60 mt-1">
+                                            Machine-learning predicted
+                                            daily power generation.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-black/30 rounded-2xl p-5 border border-emerald-500/10">
+                                        {peakInfo && (
+                                            <div className="mb-4 flex flex-wrap gap-4">
+                                                <div className="bg-emerald-500/10 rounded-xl px-4 py-3">
+                                                    <p className="text-xs text-emerald-100/50">
+                                                        Peak Power
+                                                    </p>
+                                                    <h4 className="text-xl font-bold text-emerald-300">
+                                                        {peakInfo.peakPower} kWh
+                                                    </h4>
+                                                </div>
+
+                                                <div className="bg-emerald-500/10 rounded-xl px-4 py-3">
+                                                    <p className="text-xs text-emerald-100/50">
+                                                        Peak Time
+                                                    </p>
+                                                    <h4 className="text-xl font-bold text-emerald-300">
+                                                        {peakInfo.peakTime}
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div style={{ width: "100%", height: 320 }}>
+                                            <ResponsiveContainer>
+                                                <LineChart data={graphData}>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="time" />
+                                                    <YAxis />
+                                                    <Tooltip />
+                                                    <Line
+                                                        type="monotone"
+                                                        dataKey="power_kwh"
+                                                        stroke="#34d399"
+                                                        strokeWidth={3}
+                                                        dot={false}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ADDED: Generate PDF Report Button centered below the graph */}
+                                <div className="md:col-span-2 flex justify-center mt-6">
+                                    <button
+                                        onClick={downloadPDFReport}
+                                        disabled={isExporting}
+                                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-3"
+                                    >
+                                        {isExporting ? (
+                                            <>
+                                                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Generating Proposal...
+                                            </>
+                                        ) : (
+                                            "📄 Generate PDF Report"
+                                        )}
+                                    </button>
+                                </div>
+                                
                             </div>
                         </div>
                     </div>

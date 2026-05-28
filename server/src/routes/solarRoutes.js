@@ -1,11 +1,11 @@
 import express from "express";
-
-import {
-    calculateSolar
-} from "../controllers/solarController.js";
+import { calculateSolar } from "../controllers/solarController.js";
+// 1. Import your secure auth middleware guard
+import { protect } from "../middleware/authMiddleware.js"; 
 
 const router = express.Router();
 
-router.post("/calculate", calculateSolar);
+// 2. Add 'protect' as the middle argument to guard this endpoint
+router.post("/calculate", protect, calculateSolar);
 
 export default router;
